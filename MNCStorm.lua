@@ -590,7 +590,7 @@ local function buildGUI(W)
         end
     end)
 
-    tab4:AddToggle("Wind.ez | No Collide NPC", "Désactive la collision avec les véhicules NPC", false, function(state)
+    tab4:AddToggle("Collision", "Désactive la collision avec les véhicules NPC", false, function(state)
         isWindOn = state
         if state then enableWind() else disableWind() end
     end)
@@ -602,6 +602,6 @@ end
 -- ═══════════════════════════════════════
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/zuqothempos/testtt/refs/heads/main/Test.lua"))()
 
-Library:CreateWindow("Midnight Chasers|MNCStorm", true, function(W)
+Library:CreateWindow("MNCStorm | Midnight Chasers", true, function(W)
     buildGUI(W)
 end)
