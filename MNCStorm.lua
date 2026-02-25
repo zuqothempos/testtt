@@ -600,7 +600,7 @@ end
 -- ═══════════════════════════════════════
 --          CHARGEMENT BIBLIOTHÈQUE
 -- ═══════════════════════════════════════
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/zuqothempos/testt/refs/heads/main/Test.lua"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/zuqothempos/testtt/refs/heads/main/Test.lua"))()
 
 Library:CreateWindow("Midnight Chasers", true, function(W)
     buildGUI(W)
