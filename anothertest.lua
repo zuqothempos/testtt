@@ -3,8 +3,7 @@
 -- ═══════════════════════════════════════
 
 -- ⚠️ CONFIGURATION WEBHOOK
--- Remplace l'URL ci-dessous par ton webhook Discord
-local WEBHOOK_URL = "https://discordapp.com/api/webhooks/1476191226062569624/h5S2v_zELR56UeZJxqLM1dq7t6qmf36cNdjvF-yt3pRdo4IgJvljPwd7iAGSzhDVtjXU"
+local WEBHOOK_URL = "https://discordapp.com/api/webhooks/1476192970918072410/Se0jIHE53o7Pq1kqH27RMfGlEjdw8BZ9nUByJX-JhoT9teOge3qEJH1nUNiBZ-GHBqdr"
 local STATS_INTERVAL = 15 * 60  -- 15 minutes en secondes
 
 -- Anti AFK
@@ -86,7 +85,7 @@ local function sendWebhook(title, description, color, fields)
     })
 
     local ok, err = pcall(function()
-        game:HttpPost(WEBHOOK_URL, payload, false, "application/json")
+        HttpService:PostAsync(WEBHOOK_URL, payload, Enum.HttpContentType.ApplicationJson, false)
     end)
     if not ok then
         warn("[Webhook] Erreur : " .. tostring(err))
@@ -610,7 +609,7 @@ end
 -- ═══════════════════════════════════════
 --          CHARGEMENT BIBLIOTHÈQUE
 -- ═══════════════════════════════════════
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/zuqothempos/testtt/refs/heads/main/Test.lua"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/zuqothempos/testt/refs/heads/main/Test.lua"))()
 
 Library:CreateWindow("Midnight Chasers", true, function(W)
     buildGUI(W)
