@@ -990,3 +990,9 @@ function Library:CreateWindow(title, requireKey, onReady)
 end
 
 return Library
+
+    return Window
+end
+
+
+return Library
