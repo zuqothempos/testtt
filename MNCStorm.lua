@@ -1,16 +1,14 @@
 -- ═══════════════════════════════════════
---      MIDNIGHT CHASERS - MNCStorm Bêta
+--      MIDNIGHT CHASERS - MNCStorm v2.5
 -- ═══════════════════════════════════════
 
 -- ⚠️ CONFIGURATION WEBHOOK
--- Proxy Hyra nécessaire — les exécuteurs bloquent Discord directement
-local WEBHOOK_URL = "https://hooks.hyra.io/api/webhooks/1476192970918072410/Se0jIHE53o7Pq1kqH27RMfGlEjdw8BZ9nUByJX-JhoT9teOge3qEJH1nUNiBZ-GHBqdr"
-local STATS_INTERVAL = 15 * 60  -- 15 minutes en secondes
+local WEBHOOK_URL    = "https://hooks.hyra.io/api/webhooks/1476192970918072410/Se0jIHE53o7Pq1kqH27RMfGlEjdw8BZ9nUByJX-JhoT9teOge3qEJH1nUNiBZ-GHBqdr"
+local STATS_INTERVAL = 15 * 60
 
 -- Anti AFK
 warn("Anti AFK running...")
 game:GetService("Players").LocalPlayer.Idled:connect(function()
-    warn("Anti AFK launched!")
     game:GetService("VirtualUser"):CaptureController()
     game:GetService("VirtualUser"):ClickButton2(Vector2.new())
 end)
@@ -33,14 +31,8 @@ end)
 local function getSystem()
     local UIS = game:GetService("UserInputService")
     if UIS.TouchEnabled and not UIS.KeyboardEnabled then
-        local ok, inset = pcall(function()
-            return game:GetService("GuiService"):GetGuiInset()
-        end)
-        if ok and inset.Y > 20 then
-            return "iOS"
-        else
-            return "Android"
-        end
+        local ok, inset = pcall(function() return game:GetService("GuiService"):GetGuiInset() end)
+        if ok and inset.Y > 20 then return "iOS" else return "Android" end
     elseif UIS.KeyboardEnabled and UIS.TouchEnabled then
         return "PC (tactile)"
     else
@@ -57,42 +49,24 @@ local function sendWebhook(title, description, color, fields)
     local embedFields = {}
     if fields then
         for _, f in ipairs(fields) do
-            table.insert(embedFields, {
-                name   = f.name,
-                value  = f.value,
-                inline = f.inline or false
-            })
+            table.insert(embedFields, {name = f.name, value = f.value, inline = f.inline or false})
         end
     end
-
     local payload = HttpService:JSONEncode({
         username   = "MNCStorm Logger",
         avatar_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. game.Players.LocalPlayer.UserId .. "&width=150&height=150&format=png",
-        embeds = {
-            {
-                title       = title,
-                description = description,
-                color       = color or 5814783,
-                fields      = embedFields,
-                footer      = {
-                    text = "MNCStorm Bêta • " .. os.date("%d/%m/%Y %H:%M:%S")
-                },
-                thumbnail = {
-                    url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. game.Players.LocalPlayer.UserId .. "&width=150&height=150&format=png"
-                }
-            }
-        }
+        embeds = {{
+            title       = title,
+            description = description,
+            color       = color or 5814783,
+            fields      = embedFields,
+            footer      = { text = "MNCStorm v2.5 • " .. os.date("%d/%m/%Y %H:%M:%S") },
+            thumbnail   = { url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. game.Players.LocalPlayer.UserId .. "&width=150&height=150&format=png" }
+        }}
     })
-
-    -- ✅ CORRECTION : passage par proxy Hyra
-    -- Les exécuteurs (Synapse, Krnl...) bloquent discord.com et discordapp.com
-    -- hooks.hyra.io est un proxy public qui relaie vers Discord
-    local ok, err = pcall(function()
+    pcall(function()
         HttpService:PostAsync(WEBHOOK_URL, payload, Enum.HttpContentType.ApplicationJson, false)
     end)
-    if not ok then
-        warn("[Webhook] Erreur : " .. tostring(err))
-    end
 end
 
 -- ═══════════════════════════════════════
@@ -109,8 +83,7 @@ end
 
 local function hideWorkspaceObjects(plr)
     if not game.ReplicatedStorage:FindFirstChild("mrbackupfolder") then
-        local folder = Instance.new("Folder", game.ReplicatedStorage)
-        folder.Name = "mrbackupfolder"
+        Instance.new("Folder", game.ReplicatedStorage).Name = "mrbackupfolder"
     end
     for i, v in pairs(workspace:GetChildren()) do
         if (v.ClassName == "Model" and not string.find(v.Name, plr.Name) and not string.find(v.Name, plr.DisplayName) and not string.find(v.Name, "Gift") and v.Name ~= "") or
@@ -153,8 +126,7 @@ local function tweenToPosition(car, targetPos, speed)
     end)
     getfenv().tween = TweenService:Create(TweenValue,
         TweenInfo.new(dist / speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut),
-        {Value = targetPos}
-    )
+        {Value = targetPos})
     getfenv().tween:Play()
     repeat task.wait(0)
     until getfenv().tween.PlaybackState == Enum.PlaybackState.Cancelled
@@ -195,8 +167,7 @@ local function tweenToLocation(car, locations, plr)
         end)
         getfenv().tween = TweenService:Create(TweenValue,
             TweenInfo.new(dist / speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut),
-            {Value = pos}
-        )
+            {Value = pos})
         getfenv().tween:Play()
         repeat task.wait(0)
         until getfenv().tween.PlaybackState == Enum.PlaybackState.Cancelled
@@ -213,19 +184,18 @@ local blackScreen     = nil
 local modeActuel      = "Normal"
 local speedMultiplier = {Normal = 1, Rapide = 1.5, Turbo = 2.5}
 
--- Wind.ez
 local CollectionService = game:GetService("CollectionService")
 local TAG               = "windnocollide"
 local isWindOn          = false
 local windConnections   = {}
 local npcTransparency   = 0.6
 
--- Stats session
 local sessionStart    = nil
 local timerRunning    = false
 local moneyStart      = nil
 local lastMoney       = nil
 local lastStatsSent   = nil
+local totalGained     = 0
 
 local frames = {
     CFrame.new(105.419128, -26.0098934, 7965.37988, -3.36170197e-05, 0.951051414, -0.309032798, -1, -3.36170197e-05, 5.31971455e-06, -5.31971455e-06, 0.309032798, 0.951051414),
@@ -251,12 +221,8 @@ local function shouldAffect(part)
 end
 
 local function disableCollision(part)
-    if part:GetAttribute("wind_originalcollide") == nil then
-        part:SetAttribute("wind_originalcollide", part.CanCollide)
-    end
-    if part:GetAttribute("wind_originaltransparency") == nil then
-        part:SetAttribute("wind_originaltransparency", part.Transparency)
-    end
+    if part:GetAttribute("wind_originalcollide") == nil then part:SetAttribute("wind_originalcollide", part.CanCollide) end
+    if part:GetAttribute("wind_originaltransparency") == nil then part:SetAttribute("wind_originaltransparency", part.Transparency) end
     part.CanCollide = false
     part.Transparency = npcTransparency
     CollectionService:AddTag(part, TAG)
@@ -264,15 +230,9 @@ end
 
 local function restoreCollision(part)
     local c = part:GetAttribute("wind_originalcollide")
-    if c ~= nil then
-        part.CanCollide = c
-        part:SetAttribute("wind_originalcollide", nil)
-    end
+    if c ~= nil then part.CanCollide = c; part:SetAttribute("wind_originalcollide", nil) end
     local t = part:GetAttribute("wind_originaltransparency")
-    if t ~= nil then
-        part.Transparency = t
-        part:SetAttribute("wind_originaltransparency", nil)
-    end
+    if t ~= nil then part.Transparency = t; part:SetAttribute("wind_originaltransparency", nil) end
     CollectionService:RemoveTag(part, TAG)
 end
 
@@ -294,17 +254,13 @@ local function enableWind()
     end
     local wsC = workspace.ChildAdded:Connect(function(child)
         if not isWindOn then return end
-        if child.Name == "NPCVehicles" or (child:IsA("Folder") and tonumber(child.Name)) then
-            applyToFolder(child)
-        end
+        if child.Name == "NPCVehicles" or (child:IsA("Folder") and tonumber(child.Name)) then applyToFolder(child) end
     end)
     table.insert(windConnections, wsC)
 end
 
 local function disableWind()
-    for _, part in ipairs(CollectionService:GetTagged(TAG)) do
-        restoreCollision(part)
-    end
+    for _, part in ipairs(CollectionService:GetTagged(TAG)) do restoreCollision(part) end
     for _, c in ipairs(windConnections) do c:Disconnect() end
     windConnections = {}
 end
@@ -315,9 +271,7 @@ end
 local function getMoney()
     local plr = game.Players.LocalPlayer
     -- ⚠️ Modifie "leaderstats.Cash" si le nom est différent dans ton jeu
-    local ok, val = pcall(function()
-        return plr.leaderstats.Cash.Value
-    end)
+    local ok, val = pcall(function() return plr.leaderstats.Cash.Value end)
     return ok and val or 0
 end
 
@@ -334,39 +288,33 @@ end
 local function buildGUI(W)
     local plr    = game.Players.LocalPlayer
     local system = getSystem()
+    local role   = _G.MNCKeyRole or "Free"
 
-    -- Webhook : connexion initiale
+    -- Webhook connexion
     task.spawn(function()
-        sendWebhook(
-            "🟢 Nouvelle connexion",
-            "Un joueur vient de lancer **MNCStorm Bêta**.",
-            0x57F287,
-            {
-                { name = "👤 Joueur",   value = plr.DisplayName .. " (@" .. plr.Name .. ")", inline = true  },
-                { name = "🆔 UserId",   value = tostring(plr.UserId),                         inline = true  },
-                { name = "📱 Appareil", value = system,                                       inline = true  },
-                { name = "🔑 Rôle",     value = _G.MNCKeyRole or "Free",                     inline = true  },
-                { name = "📅 Expire",   value = _G.MNCKeyExpire or "Inconnu",                inline = true  },
-                { name = "🎮 Serveur",  value = tostring(game.JobId),                         inline = false },
-            }
-        )
+        sendWebhook("🟢 Nouvelle connexion", "Un joueur vient de lancer **MNCStorm v2.5**.", 0x57F287, {
+            { name = "👤 Joueur",   value = plr.DisplayName .. " (@" .. plr.Name .. ")", inline = true  },
+            { name = "🆔 UserId",   value = tostring(plr.UserId),                         inline = true  },
+            { name = "📱 Appareil", value = system,                                       inline = true  },
+            { name = "🔑 Rôle",     value = role,                                         inline = true  },
+            { name = "📅 Expire",   value = _G.MNCKeyExpire or "Inconnu",                inline = true  },
+            { name = "🎮 Serveur",  value = tostring(game.JobId),                         inline = false },
+        })
     end)
 
     -- ─────────────────────────────
     --         TAB 1 — HOME
     -- ─────────────────────────────
     local tab1 = W:AddTab("Home")
-    tab1:AddLabel("== Welcome to MNCStorm Bêta ❤ ==")
+    tab1:AddLabel("== Welcome to MNCStorm v2.5 ❤ ==")
     tab1:AddSeparator("Informations")
     tab1:AddInfo("🖥️", "Système",    system)
-    tab1:AddInfo("🔑", "Rôle",       _G.MNCKeyRole   or "Free")
+    tab1:AddInfo("🔑", "Rôle",       role)
     tab1:AddInfo("📅", "Clé expire", _G.MNCKeyExpire or "Inconnu")
     tab1:AddSeparator("Communauté")
     tab1:AddButton("❤️  J'aime MNCStorm !", "Clique pour montrer ton soutien !", function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title    = "❤️ Merci !",
-            Text     = "Tu as aimé MNCStorm ! Merci pour ton soutien ✨",
-            Duration = 5,
+            Title = "❤️ Merci !", Text = "Tu as aimé MNCStorm ! Merci pour ton soutien ✨", Duration = 5,
         })
     end)
 
@@ -383,9 +331,7 @@ local function buildGUI(W)
 
     tab2:AddDropdown("Mode", {"Normal", "Rapide", "Turbo"}, function(option)
         modeActuel = option
-        local baseSpeed = getfenv().speed or 300
-        getfenv().speed = baseSpeed * (speedMultiplier[option] or 1)
-        warn("Mode : " .. option .. " | Vitesse : " .. tostring(getfenv().speed))
+        getfenv().speed = (getfenv().speed or 300) * (speedMultiplier[option] or 1)
     end)
 
     tab2:AddSeparator("Farm Principal")
@@ -402,9 +348,8 @@ local function buildGUI(W)
             task.wait()
             task.spawn(function()
                 while getfenv().auto do
-                    local success, err = pcall(function()
-                        local hum = plr.Character.Humanoid
-                        local car = hum.SeatPart.Parent
+                    local ok, err = pcall(function()
+                        local car = plr.Character.Humanoid.SeatPart.Parent
                         getfenv().car = car
                         ensureGroundPart()
                         car.PrimaryPart = car.Body:FindFirstChild("#Weight")
@@ -413,15 +358,16 @@ local function buildGUI(W)
                             tweenToPosition(car, v + Vector3.new(0, 5, 0), getfenv().speed or 300)
                         end
                     end)
-                    if not success then
-                        warn("Auto Farm erreur : " .. tostring(err))
-                        task.wait(2)
-                    end
+                    if not ok then warn("Auto Farm erreur : " .. tostring(err)); task.wait(2) end
                 end
             end)
         else
             timerRunning = false
             if getfenv().tween then getfenv().tween:Cancel() end
+            -- Sauvegarder la session à la fin
+            if W.saveSession then
+                W.saveSession(role, system, totalGained)
+            end
             restoreWorkspaceObjects()
         end
     end)
@@ -436,7 +382,7 @@ local function buildGUI(W)
             task.spawn(function()
                 while _G.test do
                     task.wait()
-                    local success, err = pcall(function()
+                    local ok, err = pcall(function()
                         ensureGroundPart()
                         local car = plr.Character.Humanoid.SeatPart.Parent
                         getfenv().car = car
@@ -446,10 +392,7 @@ local function buildGUI(W)
                         for i, v in pairs(workspace:GetChildren()) do
                             if v.Name == "" and v:FindFirstChild("Highlight") then
                                 local dist = (plr.Character.PrimaryPart.Position - v.WorldPivot.Position).magnitude
-                                if dist < maxdistance then
-                                    maxdistance = dist
-                                    locations = v
-                                end
+                                if dist < maxdistance then maxdistance = dist; locations = v end
                             end
                         end
                         if locations then
@@ -462,10 +405,7 @@ local function buildGUI(W)
                             until reachedMax(car)
                         end
                     end)
-                    if not success then
-                        warn("Auto Deliver erreur : " .. tostring(err))
-                        task.wait(2)
-                    end
+                    if not ok then warn("Auto Deliver erreur : " .. tostring(err)); task.wait(2) end
                 end
             end)
         else
@@ -487,23 +427,37 @@ local function buildGUI(W)
     local setStatus = tab3:AddInfo("📡", "Statut farm",   "Inactif")
 
     tab3:AddSeparator("Actions")
-
     tab3:AddButton("🔄  Réinitialiser", "Remet le timer et l'argent à zéro", function()
         sessionStart  = tick()
         moneyStart    = getMoney()
         lastMoney     = moneyStart
         lastStatsSent = tick()
+        totalGained   = 0
         setTimer("00h 00m 00s")
         setMoney("0")
         setDelta("+0")
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title    = "Stats réinitialisées",
-            Text     = "Timer et argent remis à zéro.",
-            Duration = 3,
+            Title = "Stats réinitialisées", Text = "Timer et argent remis à zéro.", Duration = 3,
         })
     end)
 
-    -- Boucle stats — mise à jour chaque seconde + webhook toutes les 15min
+    tab3:AddSeparator("Historique")
+    tab3:AddButton("📂  Ouvrir l'historique", "Affiche le fichier des sessions", function()
+        if readfile then
+            local ok, content = pcall(readfile, "MNCStorm_sessions.txt")
+            if ok and content and content ~= "" then
+                game:GetService("StarterGui"):SetCore("SendNotification", {
+                    Title = "📂 Historique", Text = "Fichier : MNCStorm_sessions.txt (voir dossier de l'exécuteur)", Duration = 6,
+                })
+            else
+                game:GetService("StarterGui"):SetCore("SendNotification", {
+                    Title = "📂 Historique", Text = "Aucune session enregistrée pour l'instant.", Duration = 4,
+                })
+            end
+        end
+    end)
+
+    -- Boucle stats
     task.spawn(function()
         while true do
             task.wait(1)
@@ -514,37 +468,24 @@ local function buildGUI(W)
                 local gained  = math.max(0, current - (moneyStart or current))
                 local delta   = current - (lastMoney or current)
                 lastMoney     = current
+                totalGained   = gained
 
                 setTimer(formatTime(elapsed))
                 setMoney(tostring(gained))
                 setStatus("✅ Actif")
+                setDelta(delta > 0 and ("+" .. delta) or (delta < 0 and tostring(delta) or "+0"))
 
-                if delta > 0 then
-                    setDelta("+" .. tostring(delta))
-                elseif delta < 0 then
-                    setDelta(tostring(delta))
-                else
-                    setDelta("+0")
-                end
-
-                -- Webhook toutes les 15 minutes
                 if lastStatsSent and (now - lastStatsSent) >= STATS_INTERVAL then
                     lastStatsSent = now
-                    local elapsed_fmt = formatTime(elapsed)
                     task.spawn(function()
-                        sendWebhook(
-                            "📊 Rapport de stats — 15 min",
-                            "Rapport automatique de la session en cours.",
-                            0x5865F2,
-                            {
-                                { name = "👤 Joueur",       value = plr.DisplayName .. " (@" .. plr.Name .. ")", inline = true  },
-                                { name = "📱 Appareil",     value = system,                                       inline = true  },
-                                { name = "⏱️ Temps actif",  value = elapsed_fmt,                                  inline = false },
-                                { name = "💰 Argent gagné", value = tostring(gained),                             inline = true  },
-                                { name = "📈 Dernier gain", value = (delta >= 0 and "+" or "") .. tostring(delta),inline = true  },
-                                { name = "📡 Statut",       value = "✅ Farm actif",                              inline = false },
-                            }
-                        )
+                        sendWebhook("📊 Rapport de stats — 15 min", "Rapport automatique.", 0x5865F2, {
+                            { name = "👤 Joueur",       value = plr.DisplayName .. " (@" .. plr.Name .. ")", inline = true  },
+                            { name = "📱 Appareil",     value = system,                                       inline = true  },
+                            { name = "⏱️ Temps actif",  value = formatTime(elapsed),                          inline = false },
+                            { name = "💰 Argent gagné", value = tostring(gained),                             inline = true  },
+                            { name = "📈 Dernier gain", value = (delta >= 0 and "+" or "") .. tostring(delta),inline = true  },
+                            { name = "📡 Statut",       value = "✅ Farm actif",                              inline = false },
+                        })
                     end)
                 end
             else
@@ -567,15 +508,12 @@ local function buildGUI(W)
             blackScreen.DisplayOrder = -1000
             blackScreen.Parent = game.CoreGui
             local frame = Instance.new("Frame")
-            frame.Size = UDim2.new(1, 0, 1, 0)
-            frame.BackgroundColor3 = Color3.new(0, 0, 0)
+            frame.Size = UDim2.new(1,0,1,0)
+            frame.BackgroundColor3 = Color3.new(0,0,0)
             frame.BorderSizePixel = 0
             frame.Parent = blackScreen
         else
-            if blackScreen then
-                blackScreen:Destroy()
-                blackScreen = nil
-            end
+            if blackScreen then blackScreen:Destroy(); blackScreen = nil end
         end
     end)
 
@@ -590,9 +528,79 @@ local function buildGUI(W)
         end
     end)
 
-    tab4:AddToggle("Collision", "Désactive la collision avec les véhicules NPC", false, function(state)
+    tab4:AddToggle("Wind.ez | No Collide NPC", "Désactive la collision avec les véhicules NPC", false, function(state)
         isWindOn = state
         if state then enableWind() else disableWind() end
+    end)
+
+    -- ─────────────────────────────
+    --    TAB 5 — ADMIN (caché)
+    -- ─────────────────────────────
+    local tabAdmin = W:AddTab("⚙️ Admin", true) -- true = Admin uniquement
+
+    tabAdmin:AddLabel("== Panel Administrateur ==")
+    tabAdmin:AddSeparator("Gestion des clés")
+
+    -- Affichage clés actives
+    tabAdmin:AddInfo("🔑", "Clés Admin actives",   "2")
+    tabAdmin:AddInfo("⭐", "Clés Premium actives", "2")
+    tabAdmin:AddInfo("🔓", "Clés Free actives",    "2")
+
+    tabAdmin:AddSeparator("Blacklist")
+
+    -- Champ pour blacklister manuellement un UserId
+    local blacklistInput = tabAdmin:AddInput("Blacklister UserId", "Ex: 123456789", function(val)
+        local id = tonumber(val)
+        if id then
+            -- Ajouter à la blacklist via _G pour que Test.lua le traite
+            if not _G.MNCAdminBlacklist then _G.MNCAdminBlacklist = {} end
+            table.insert(_G.MNCAdminBlacklist, id)
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "⛔ Blacklist", Text = "UserId " .. tostring(id) .. " ajouté à la blacklist.", Duration = 4,
+            })
+        end
+    end)
+
+    tabAdmin:AddSeparator("Statistiques globales")
+    tabAdmin:AddInfo("🌐", "Serveur",  tostring(game.JobId):sub(1,18) .. "...")
+    tabAdmin:AddInfo("👥", "Joueurs",  tostring(#game.Players:GetPlayers()))
+
+    -- Mise à jour joueurs en temps réel
+    task.spawn(function()
+        while true do
+            task.wait(5)
+            -- Le setAdmin n'existe pas directement, on le fait via warn pour debug
+            -- Les AddInfo sont statiques, donc on affiche dans warn
+            warn("[Admin] Joueurs en ligne : " .. #game.Players:GetPlayers())
+        end
+    end)
+
+    tabAdmin:AddSeparator("Actions admin")
+
+    tabAdmin:AddButton("📢  Envoyer rapport complet", "Envoie toutes les stats au webhook", function()
+        task.spawn(function()
+            local elapsed = sessionStart and formatTime(tick() - sessionStart) or "N/A"
+            sendWebhook("📋 Rapport Admin Manuel", "Rapport envoyé manuellement par l'admin.", 0xEB459E, {
+                { name = "👤 Admin",        value = plr.DisplayName .. " (@" .. plr.Name .. ")", inline = true  },
+                { name = "⏱️ Temps actif",  value = elapsed,                                      inline = true  },
+                { name = "💰 Argent gagné", value = tostring(totalGained),                        inline = true  },
+                { name = "📡 Statut",       value = timerRunning and "✅ Farm actif" or "⛔ Inactif", inline = false },
+                { name = "👥 Joueurs",      value = tostring(#game.Players:GetPlayers()),          inline = true  },
+                { name = "🎮 Serveur",      value = tostring(game.JobId),                          inline = false },
+            })
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "📢 Rapport envoyé", Text = "Le rapport complet a été envoyé au webhook Discord.", Duration = 4,
+            })
+        end)
+    end)
+
+    tabAdmin:AddButton("🗑️  Vider l'historique", "Supprime le fichier MNCStorm_sessions.txt", function()
+        if writefile then
+            pcall(writefile, "MNCStorm_sessions.txt", "")
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "🗑️ Historique vidé", Text = "Le fichier de sessions a été effacé.", Duration = 4,
+            })
+        end
     end)
 
 end
@@ -602,6 +610,6 @@ end
 -- ═══════════════════════════════════════
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/zuqothempos/testtt/refs/heads/main/Test.lua"))()
 
-Library:CreateWindow("MNCStorm | Midnight Chasers", true, function(W)
+Library:CreateWindow("MNCSTorm | Midnight chasers", true, function(W)
     buildGUI(W)
 end)
