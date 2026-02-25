@@ -610,6 +610,6 @@ end
 -- ═══════════════════════════════════════
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/zuqothempos/testtt/refs/heads/main/Test.lua"))()
 
-Library:CreateWindow("MNCSTorm | Midnight chasers", true, function(W)
+Library:CreateWindow("MNCSTorm | Midniight chasers", true, function(W)
     buildGUI(W)
 end)
